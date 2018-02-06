@@ -97,7 +97,7 @@ public void test() {
 ## 三、原理解析
 分析框架原理的时候，咱们得首先找到切入点，或者是疑惑点。基于上面的例子，有3个疑惑点：
 
-1. `RestClientV1.getOrderDetail`方法返回值类型`returnType`是如何起作用的？
+1. `RestClientV1.getOrderDetail`方法返回类型String是如何起作用的？
 2. `CallAdapterFactory`是如何起作用的？
 3. `ConverterFactory`是如何起作用的？
 
@@ -160,7 +160,7 @@ public <T> Converter<ResponseBody, T> responseBodyConverter(Type type, Annotatio
 }
 
 ```
-上面的`retrofit.responseBodyConverter(..)`中的`responseType`参数正是`StringCallAdapter`中返回的`String.class`，再看核心的获取`Converter`的方法，跟获取`CallAdapter`的方法基本一致，结合2.2的代码，我们发现，当传入参数`type=String.class`的时候，会返回`StringConverter`
+上面的`retrofit.responseBodyConverter(..)`中的`responseType`参数正是`StringCallAdapter`中返回的`String.class`，再看核心的获取`Converter`的方法，跟获取`CallAdapter`的方法基本一致，结合2.2的代码，我们发现，当传入参数`type`为`String.class`的时候，会返回`StringConverter`
 
 ```java
 public <T> Converter<ResponseBody, T> nextResponseBodyConverter(
@@ -266,15 +266,15 @@ public String convert(ResponseBody value) throws IOException {
 
 
 ## 四、进阶使用
-咱们前面那个例子没有什么实际的意义，下面咱们使用retrofit的这个设计做一个有意义的App网络层封装，在这之前我们先看几个问题：
+前面那个例子没有什么实际的意义，下面咱们使用retrofit的这个设计做一个有意义的App网络层封装，在这之前我们先看看在网络层封装时基本都会遇到的几个问题：
 
-1. 网络请求返回时，防止组件(Activity／Fragment)已被销毁时导致的崩溃
+1. 网络请求返回时，需要防止组件(Activity／Fragment)已被销毁时导致的崩溃
 2. 监听请求状态，灵活实现loading、success和error
 3. 方便串行发起多个网络请求
 4. 便于实现请求前后的业务拦截，比如登录token失效自动跳转登录页面
 5. Presenter/ViewModel层应该不耦合于具体的网络框架，一旦换网络框架对这一层没有影响
 
-为了解决上面的问题，我们设计自己的`Call`接口，在看`Call`接口的代码前，有几点需要说明下：
+为了解决上面的问题，咱们设计自己的`Call`接口，在看`Call`接口的代码前，有几点需要说明下：
 
 * 一般我们需要跟服务端约定一个统一的数据返回格式，在这个示例中，约定如下：
 
@@ -298,7 +298,7 @@ public class ApiResponse<T> {
     private String errorMsg;
 }
 ```
-> 正常情况下，服务端会返回请求业务成功(ok)或者失败(fail)，在客户端我们增加了一个error的status，用于表示非200的请求以及请求发生异常的情况
+> 正常情况下，服务端会返回请求业务成功(ok)或者失败(fail)；异常情况下，客户端增加一个error的status，用于表示非200的请求以及调用抛出异常的情况
 
 * 为了适配不同的Loading样式，我们设计了`ProgressOperation`接口
 
@@ -385,7 +385,7 @@ public interface Call<T> {
 > 上面的代码注释已经比较详细，大家可以仔细看下
 <br>
 
-* 我们以Android官方的LiveData为基础做了单个请求[Call的实现类](https://github.com/TomkeyZhang/Retrofit2-CallAdapter-Converter-Demo/blob/master/app/src/main/java/com/example/tomkeyzhang/retrofit2_demo/call/impl/DefaultCall.java)，实现这块就不再讲解，有兴趣大家可以自行查看。下面咱们看一下如何使用这个`Call`
+* 我们以Android官方的LiveData为基础做了单个请求[Call的实现类](https://github.com/TomkeyZhang/Retrofit2-CallAdapter-Converter-Demo/blob/master/app/src/main/java/com/example/tomkeyzhang/retrofit2_demo/call/impl/DefaultCall.java)，实现这块就不再讲解，有兴趣大家可以自行查看源码。下面咱们看一下如何使用这个`Call`
 
 ```java
 restClientV1.ok("1").progress(progress).ok(content -> {
@@ -416,7 +416,6 @@ call.enqueue(lifecycleOwner,apiResponse -> {
 
 ```java
 public class CheckTokenInterceptor implements Call.Interceptor {
-
     public static final CheckTokenInterceptor INSTANCE = new CheckTokenInterceptor();
 
     /**
@@ -426,7 +425,6 @@ public class CheckTokenInterceptor implements Call.Interceptor {
     public boolean preExecute() {
         return false;
     }
-
     /**
      * 对于异步请求，返回true表示停止下一步执行
      */
@@ -434,12 +432,10 @@ public class CheckTokenInterceptor implements Call.Interceptor {
     public boolean onResponse(ApiResponse apiResponse) {
         return checkTokenExpired(apiResponse.getErrorCode());
     }
-
     private boolean checkTokenExpired(String errorCode) {
         //检查token是否过期
         return false;
     }
-
 }
 
 ```
