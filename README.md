@@ -9,7 +9,7 @@ public interface RestClientV1 {
 ｝
 ```
 
-如果你不能肯定的回答可以，同时不能清楚的知道该怎么做，推荐阅读这篇文章。这是一篇retrofit2的进阶用法的文章，如果不熟悉retrofit2的基本用法，建议先去[官网](http://square.github.io/retrofit/)看一下教程，再过来看这篇文章。可以先收藏一下以备不时之需（当你需要独立搭建一个项目的网络框架的时候，可以翻来看看）。
+如果你不能肯定的回答可以，同时不能清楚的知道该怎么做，推荐阅读这篇文章。这是一篇retrofit2的进阶用法的文章，如果不熟悉retrofit2的基本用法，建议先去[官网](http://square.github.io/retrofit/)看一下教程，再过来看这篇文章。如果你正在考虑如何使用retrofit来封装一个灵活好用的网络层，这篇文章应该非常适合你。
 
 ## 二、如何实现上面的功能
 ### 2.1 定义`StringCallAdapterFactory`和	`StringCallAdapter`
@@ -75,7 +75,7 @@ public class StringConverterFactory extends Converter.Factory {
 ```java
 @Before
 public void create() {
-	mockWebServer = new MockWebServer();
+    mockWebServer = new MockWebServer();
     mockWebServer.setDispatcher(new MockDispatcher());
     OkHttpClient client = new OkHttpClient.Builder().build();
     restClientV1 = new Retrofit.Builder()
@@ -93,18 +93,17 @@ public void test() {
 ```
 > 运行结果： hi man,this is order detail(orderId=1)
 
-
-
-
-[完整源码github](https://github.com/TomkeyZhang/Retrofit2-CallAdapter-Converter-Demo)
+[测试类源码](https://github.com/TomkeyZhang/Retrofit2-CallAdapter-Converter-Demo/blob/master/app/src/test/java/com/example/tomkeyzhang/retrofit2_demo/StringReturnTypeTest.java)
 ## 三、原理解析
-分析框架原理的时候，咱们得首先找到切入点，或者是疑惑点，基于上面的例子，有3个疑惑点：
+分析框架原理的时候，咱们得首先找到切入点，或者是疑惑点。基于上面的例子，有3个疑惑点：
 
-1. RestClientV1.getOrderDetail方法返回值类型是如何起作用的？
-2. CallAdapterFactory是如何起作用的？
-3. ConverterFactory是如何起作用的？
+1. `RestClientV1.getOrderDetail`方法返回值类型`returnType`是如何起作用的？
+2. `CallAdapterFactory`是如何起作用的？
+3. `ConverterFactory`是如何起作用的？
+
 
 ### 3.1 从`returnType`(String.class)到`CallAdapter<T, R>`(StringCallAdapter)
+在源码中我们先找到获取`CallAdapter<T, R>`的地方
 
 ```java
 private CallAdapter<T, R> createCallAdapter() {
@@ -112,14 +111,16 @@ private CallAdapter<T, R> createCallAdapter() {
       //省略
       Annotation[] annotations = method.getAnnotations();
       try {
-        //noinspection unchecked
+        //<-关键代码
         return (CallAdapter<T, R>) retrofit.callAdapter(returnType, annotations);
       } catch (RuntimeException e) { // Wide exception range because factories are user code.
         throw methodError(e, "Unable to create call adapter for %s", returnType);
       }
     }
 ```
-实际上是以`returnType`(String.class)为参数调用了`retrofit.callAdapter(..)`方法获取一个适配器
+> 代码中的method对象就是`RestClientV1.getOrderDetail(..)`方法
+
+上面关键代码处以`returnType`(String.class)为参数调用了`retrofit.callAdapter(..)`方法获取一个适配器，接着看
 
 ```java
 public CallAdapter<?, ?> callAdapter(Type returnType, Annotation[] annotations) {
@@ -142,6 +143,7 @@ public CallAdapter<?, ?> nextCallAdapter(@Nullable CallAdapter.Factory skipPast,
 
 ### 3.2 从`responseType`(String.class)到`Converter<F, T>`(StringConverter)
 
+同样的，在源码中我们先找到获取`Converter<F, T>`的地方
 
 ```java
 private Converter<ResponseBody, T> createResponseConverter() {
@@ -184,6 +186,8 @@ final class ServiceMethod<R, T> {
 	private final Converter<ResponseBody, R> responseConverter;
 }
 ```
+再看看这两个对象分别是在哪个地方起作用的
+
 * `CallAdapter<T, R>`的作用处
 
 ```java
@@ -262,7 +266,7 @@ public String convert(ResponseBody value) throws IOException {
 
 
 ## 四、进阶使用
-咱们前面那个例子没有什么实际的意义，下面咱们使用retrofit的这个设计做一个有意义的设计封装，我们做网络层封装的时候经常会面对的问题：
+咱们前面那个例子没有什么实际的意义，下面咱们使用retrofit的这个设计做一个有意义的App网络层封装，在这之前我们先看几个问题：
 
 1. 网络请求返回时，防止组件(Activity／Fragment)已被销毁时导致的崩溃
 2. 监听请求状态，灵活实现loading、success和error
@@ -294,7 +298,7 @@ public class ApiResponse<T> {
     private String errorMsg;
 }
 ```
-> 在客户端我们增加了一个error的status，用于表示非200的请求以及请求发生异常的情况
+> 正常情况下，服务端会返回请求业务成功(ok)或者失败(fail)，在客户端我们增加了一个error的status，用于表示非200的请求以及请求发生异常的情况
 
 * 为了适配不同的Loading样式，我们设计了`ProgressOperation`接口
 
@@ -308,9 +312,9 @@ public interface ProgressOperation {
     void showProgress();
 }
 ```
-> 这样当我们需要弹一个框来或者用Progressbar替换整个页面来实现Loading的时候，只要分别做一个实现类即可
+> 这样当我们需要使用不同的UI展示形式（如：ProgressDialog或者Progressbar）来实现Loading的时候，只要分别做一个实现类即可
 
-* 为了更好更稳定持续的管理组件的生命周期，示例中使用了Android官方的lifecycle组件，不了解的请大家自行去官网查看相应[教程](https://developer.android.com/topic/libraries/architecture/lifecycle.html)
+* 示例中使用了Android官方的lifecycle组件，用来管理组件的生命周期，没用过的同学可以去官网简单查看一下[教程](https://developer.android.com/topic/libraries/architecture/lifecycle.html)，不需要了解太深，只要知道大概即可
 
 **下面是自定义的`Call`接口代码：**
 
@@ -381,7 +385,7 @@ public interface Call<T> {
 > 上面的代码注释已经比较详细，大家可以仔细看下
 <br>
 
-* 我们以Android官方的LiveData为基础做了单个请求[Call的实现类]()，实现这块就不再讲解，有兴趣大家可以自行查看。下面咱们看一下如何使用这个`Call`
+* 我们以Android官方的LiveData为基础做了单个请求[Call的实现类](https://github.com/TomkeyZhang/Retrofit2-CallAdapter-Converter-Demo/blob/master/app/src/main/java/com/example/tomkeyzhang/retrofit2_demo/call/impl/DefaultCall.java)，实现这块就不再讲解，有兴趣大家可以自行查看。下面咱们看一下如何使用这个`Call`
 
 ```java
 restClientV1.ok("1").progress(progress).ok(content -> {
@@ -460,5 +464,5 @@ public static Call task(Executor executor, Task... tasks) {
 
 **小结**
 
-从上面对于单个和多个串行请求的设计和用法中可以看到，我们完全解决了前面提到的5个问题。而且在这种设计下，我们使用自己的`Call`接口做为网络层和其它层交互的纽带，其它层(Presenter/ViewModel、Activity/Fragment)完全不知道我们使用的是什么网络框架，那么如果哪天有一个更好用的网络框架，我们替换起来也是非常方便。最后在放一下本文demo的[源码链接]()。
+从上面对于单个和多个串行请求的设计和用法中可以看到，我们完全解决了前面提到的5个问题。而且在这种设计下，我们使用自己的`Call`接口做为网络层和其它层交互的纽带，其它层(Presenter/ViewModel、Activity/Fragment)完全不知道我们使用的是什么网络框架，那么如果哪天有一个更好用的网络框架，我们替换起来也是非常方便。最后再放一下本文demo的[源码链接](https://github.com/TomkeyZhang/Retrofit2-CallAdapter-Converter-Demo)。
 
