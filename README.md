@@ -9,7 +9,7 @@ public interface RestClientV1 {
 ｝
 ```
 
-如果你不能肯定的回答可以，同时不能清楚的知道该怎么做，推荐阅读这篇文章。这是一篇retrofit2的进阶用法的文章，如果不熟悉retrofit2的基本用法，建议先去[官网](http://square.github.io/retrofit/)看一下教程，再过来看这篇文章。如果你正在考虑如何使用retrofit来封装一个灵活好用的网络层，这篇文章应该非常适合你。
+如果你不能肯定的回答可以，同时不能清楚的知道该怎么做，推荐阅读这篇文章。这是一篇retrofit2的进阶用法的文章，如果不熟悉retrofit2的基本用法，建议先去[官网](http://square.github.io/retrofit/)看一下教程，再过来看这篇文章。如果你正在考虑如何使用retrofit来封装一个网络层，这篇文章应该非常适合你。
 
 ## 二、如何实现上面的功能
 ### 2.1 定义`StringCallAdapterFactory`和	`StringCallAdapter`
@@ -43,7 +43,7 @@ public class StringCallAdapterFactory extends CallAdapter.Factory {
 }
 
 ```
-get方法的作用是返回处理指定returnType（接口定义方法的返回类型）的CallAdapter，而CallAdapter，顾名思义就是Call（retrofit2.Call）的一个适配器，作用就是将Call转化成自己想要的任意类型（这个逻辑具体是在adapt(..)方法里面处理）。特别地，responseType()方法的作用是告诉Converter，我需要一个String类型的响应数据。
+`StringCallAdapterFactory`中`get(..)`方法的作用是返回处理指定`returnType`（接口定义方法的返回类型）的`CallAdapter`，而`CallAdapter`，顾名思义就是`Call`（`retrofit2.Call`）的一个适配器，作用就是将Call转化成自己想要的任意类型（这个逻辑具体是在`adapt(..)`方法里面处理）。特别地，`responseType()`方法的作用是告诉`Converter`，我需要一个String类型的响应数据。
 <br>
 
 ### 2.2 定义`StringConverterFactory`和`StringConverter`
@@ -68,7 +68,7 @@ public class StringConverterFactory extends Converter.Factory {
     }
 }
 ```
-`Converter`的作用是把http响应数据ResponseBody转化为需要的类型，这个类型正是前面responseType()方法定义的（这里是String.class）。在上面的responseBodyConverter(..)方法中，我们只对我们关心的type(String.class)进行了处理，返回我们自定义的StringConverter，这个转换器也很简单，直接调用ResponseBody.string()方法返回字符串。
+`Converter`的作用是把http响应数据`ResponseBody`转化为需要的类型，这个类型正是前面`responseType()`方法定义的（这里是`String.class`）。在上面的`responseBodyConverter(..)`方法中，我们只对我们关心的`type`(`String.class`)进行了处理，返回我们自定义的`StringConverter`，这个转换器也很简单，直接调用`ResponseBody.string()`方法返回字符串。
 
 ### 2.3 测试
 
