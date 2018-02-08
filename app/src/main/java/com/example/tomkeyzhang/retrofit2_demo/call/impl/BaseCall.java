@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Created by tomkeyzhang on 4/1/18.
  */
 
-public abstract class BaseDadaCall<T> extends LiveData<ApiResponse<T>> implements Call<T> {
+public abstract class BaseCall<T> extends LiveData<ApiResponse<T>> implements Call<T> {
     private AtomicBoolean started = new AtomicBoolean(false);
     private Observer<T> ok = Call.OBSERVER_NONE;
     private Observer<ApiResponse<T>> fail = Call.OBSERVER_NONE;
@@ -30,7 +30,7 @@ public abstract class BaseDadaCall<T> extends LiveData<ApiResponse<T>> implement
     private List<Interceptor> interceptors = new ArrayList<>();
     protected LifeState lifeState;
 
-    public BaseDadaCall(List<Interceptor> interceptors) {
+    public BaseCall(List<Interceptor> interceptors) {
         this.interceptors = interceptors;
     }
 
@@ -144,10 +144,13 @@ public abstract class BaseDadaCall<T> extends LiveData<ApiResponse<T>> implement
     public void enqueue(@NonNull Observer<ApiResponse<T>> observer) {
         enqueue(ALWAYS_ON, observer);
     }
-
     @Override
     public void cancel() {
-        lifeState.cancel();
+        if (!isCancelled()) {
+            lifeState.cancel();
+            if (progress != null)
+                progress.showFailed();
+        }
     }
 
     @Override

@@ -14,7 +14,7 @@ import retrofit2.Response;
  * Created by tomkeyzhang on 27/12/17.
  */
 
-public class DefaultCall<T> extends BaseDadaCall<T> {
+public class DefaultCall<T> extends BaseCall<T> {
     private final Call<ApiResponse<T>> call;
 
     public DefaultCall(@NonNull Call<ApiResponse<T>> call, @NonNull List<com.example.tomkeyzhang.retrofit2_demo.call.Call.Interceptor> interceptors) {

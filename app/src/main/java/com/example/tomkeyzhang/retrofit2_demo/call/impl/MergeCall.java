@@ -17,7 +17,7 @@ import java.util.concurrent.Executor;
  * 异步的执行多个DadaCall
  */
 
-public class MergeCall extends BaseDadaCall {
+public class MergeCall extends BaseCall {
     private List<Task> tasks;
     private Executor executor;
 
